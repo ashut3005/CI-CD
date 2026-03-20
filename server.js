@@ -61,30 +61,30 @@ const path = require("path");
 const mongoose = require("mongoose");
 const multer = require("multer");
 const AWS = require("aws-sdk");
-require("dotenv").config();
 
 const app = express();
 app.use(express.urlencoded({ extended: true }));
 
-// 🔹 MongoDB Connection
-mongoose.connect("mongodb+srv://root:123@cluster0.zgyngz9.mongodb.net/")
+// ✅ MongoDB (HARDCODED)
+mongoose.connect("mongodb+srv://root:123@cluster0.zgyngz9.mongodb.net/registerDB?retryWrites=true&w=majority")
   .then(() => console.log("MongoDB Connected ✅"))
   .catch(err => console.log("Mongo Error:", err));
 
-// 🔹 AWS S3 Config (IAM role preferred)
+// ✅ AWS S3 CONFIG (HARDCODED REGION ONLY)
+// (Using EC2 IAM role → no need accessKey/secretKey)
 AWS.config.update({
-  region: ap-south-1
+  region: "ap-south-1"
 });
 
 const s3 = new AWS.S3();
 
-// 🔹 Multer (store file in memory)
+// ✅ Multer setup
 const upload = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: 5 * 1024 * 1024 } // 5MB limit
+  limits: { fileSize: 5 * 1024 * 1024 }
 });
 
-// 🔹 Schema
+// ✅ Schema
 const userSchema = new mongoose.Schema({
   name: String,
   email: String,
@@ -93,12 +93,12 @@ const userSchema = new mongoose.Schema({
 
 const User = mongoose.model("User", userSchema);
 
-// 🔹 Serve frontend
+// ✅ Serve frontend
 app.get("/", (req, res) => {
   res.sendFile(path.join(__dirname, "index.html"));
 });
 
-// 🔥 Register + Upload Image
+// ✅ Register + Upload Image
 app.post("/register", upload.single("image"), async (req, res) => {
   try {
     const { name, email } = req.body;
@@ -107,9 +107,9 @@ app.post("/register", upload.single("image"), async (req, res) => {
       return res.send("Please upload an image ❌");
     }
 
-    // 🔹 Upload to S3
+    // ✅ S3 Upload (HARDCODED BUCKET)
     const params = {
-      Bucket: process.env.S3_BUCKET,
+      Bucket: "a--aps1-az1--x-s3", // 🔥 replace this
       Key: Date.now() + "-" + req.file.originalname,
       Body: req.file.buffer,
       ContentType: req.file.mimetype
@@ -117,7 +117,7 @@ app.post("/register", upload.single("image"), async (req, res) => {
 
     const result = await s3.upload(params).promise();
 
-    // 🔹 Save to MongoDB
+    // ✅ Save to MongoDB
     const user = new User({
       name,
       email,
@@ -141,13 +141,13 @@ app.post("/register", upload.single("image"), async (req, res) => {
   }
 });
 
-// 🔹 View users
+// ✅ View users
 app.get("/users", async (req, res) => {
   const users = await User.find();
   res.json(users);
 });
 
-// 🔹 Start server
+// ✅ Start server
 app.listen(5000, "0.0.0.0", () => {
   console.log("Server running on port 5000");
 });
