@@ -66,7 +66,7 @@ const app = express();
 app.use(express.urlencoded({ extended: true }));
 
 // ✅ MongoDB (HARDCODED)
-mongoose.connect("mongodb+srv://root:123@cluster0.zgyngz9.mongodb.net/registerDB?retryWrites=true&w=majority")
+mongoose.connect("mongodb+srv://root:123@cluster0.zgyngz9.mongodb.net/registerDB")
   .then(() => console.log("MongoDB Connected ✅"))
   .catch(err => console.log("Mongo Error:", err));
 
