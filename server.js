@@ -1,66 +1,163 @@
+// // const express = require("express");
+// // const path = require("path");
+// // const mongoose = require("mongoose");
+
+// // const app = express();
+// // app.use(express.urlencoded({ extended: true }));
+
+// // // 🔹 Connect MongoDB
+// // mongoose.connect("mongodb+srv://root:123@cluster0.zgyngz9.mongodb.net/")
+// // .then(() => console.log("MongoDB Connected ✅"))
+// // .catch(err => console.log(err));
+
+// // // 🔹 Create Schema
+// // const userSchema = new mongoose.Schema({
+// //   name: String,
+// //   email: String
+// // });
+
+// // // 🔹 Create Model
+// // const User = mongoose.model("User", userSchema);
+
+// // // Serve page
+// // app.get("/", (req, res) => {
+// //   res.sendFile(path.join(__dirname, "index.html"));
+// // });
+
+// // // Handle registration
+// // app.post("/register", async (req, res) => {
+// //   try {
+// //     const { name, email } = req.body;
+
+// //     const newUser = new User({ name, email });
+// //     await newUser.save();
+
+// //     res.send(`
+// //       <h2>Registration Successful ✅</h2>
+// //       <p>Name: ${name}</p>
+// //       <p>Email: ${email}</p>
+// //       <a href="/">Go Back</a>
+// //     `);
+
+// //   } catch (error) {
+// //     res.send("Error saving data ❌");
+// //   }
+// // });
+
+// // // View all users
+// // app.get("/users", async (req, res) => {
+// //   const users = await User.find();
+// //   res.json(users);
+// // });
+
+// // app.listen(5000, () => console.log("Server running on port 5000"));
+
+
+
+
+
 // const express = require("express");
 // const path = require("path");
 // const mongoose = require("mongoose");
+// const multer = require("multer");
+// const AWS = require("aws-sdk");
 
 // const app = express();
 // app.use(express.urlencoded({ extended: true }));
 
-// // 🔹 Connect MongoDB
-// mongoose.connect("mongodb+srv://root:123@cluster0.zgyngz9.mongodb.net/")
-// .then(() => console.log("MongoDB Connected ✅"))
-// .catch(err => console.log(err));
+// // ✅ MongoDB (HARDCODED)
+// mongoose.connect("mongodb+srv://root:123@cluster0.zgyngz9.mongodb.net/registerDB")
+//   .then(() => console.log("MongoDB Connected ✅"))
+//   .catch(err => console.log("Mongo Error:", err));
 
-// // 🔹 Create Schema
-// const userSchema = new mongoose.Schema({
-//   name: String,
-//   email: String
+// // ✅ AWS S3 CONFIG (HARDCODED REGION ONLY)
+// // (Using EC2 IAM role → no need accessKey/secretKey)
+// AWS.config.update({
+//   region: "ap-south-1"
 // });
 
-// // 🔹 Create Model
+// const s3 = new AWS.S3();
+
+// // ✅ Multer setup
+// const upload = multer({
+//   storage: multer.memoryStorage(),
+//   limits: { fileSize: 5 * 1024 * 1024 }
+// });
+
+// // ✅ Schema
+// const userSchema = new mongoose.Schema({
+//   name: String,
+//   email: String,
+//   image: String
+// });
+
 // const User = mongoose.model("User", userSchema);
 
-// // Serve page
+// // ✅ Serve frontend
 // app.get("/", (req, res) => {
 //   res.sendFile(path.join(__dirname, "index.html"));
 // });
 
-// // Handle registration
-// app.post("/register", async (req, res) => {
+// // ✅ Register + Upload Image
+// app.post("/register", upload.single("image"), async (req, res) => {
 //   try {
 //     const { name, email } = req.body;
 
-//     const newUser = new User({ name, email });
-//     await newUser.save();
+//     if (!req.file) {
+//       return res.send("Please upload an image ❌");
+//     }
+
+//     // ✅ S3 Upload (HARDCODED BUCKET)
+//     const params = {
+//       Bucket: "a--aps1-az1--x-s3", // 🔥 replace this
+//       Key: Date.now() + "-" + req.file.originalname,
+//       Body: req.file.buffer,
+//       ContentType: req.file.mimetype
+//     };
+
+//     const result = await s3.upload(params).promise();
+
+//     // ✅ Save to MongoDB
+//     const user = new User({
+//       name,
+//       email,
+//       image: result.Location
+//     });
+
+//     await user.save();
 
 //     res.send(`
 //       <h2>Registration Successful ✅</h2>
-//       <p>Name: ${name}</p>
-//       <p>Email: ${email}</p>
+//       <p><b>Name:</b> ${name}</p>
+//       <p><b>Email:</b> ${email}</p>
+//       <img src="${result.Location}" width="200"/>
+//       <br><br>
 //       <a href="/">Go Back</a>
 //     `);
 
-//   } catch (error) {
-//     res.send("Error saving data ❌");
+//   } catch (err) {
+//     console.log("ERROR:", err);
+//     res.send("Error uploading ❌");
 //   }
 // });
 
-// // View all users
+// // ✅ View users
 // app.get("/users", async (req, res) => {
 //   const users = await User.find();
 //   res.json(users);
 // });
 
-// app.listen(5000, () => console.log("Server running on port 5000"));
-
-
-
+// // ✅ Start server
+// app.listen(5000, "0.0.0.0", () => {
+//   console.log("Server running on port 5000");
+// });
 
 
 const express = require("express");
 const path = require("path");
 const mongoose = require("mongoose");
 const multer = require("multer");
-const AWS = require("aws-sdk");
+const { S3Client, PutObjectCommand } = require("@aws-sdk/client-s3");
 
 const app = express();
 app.use(express.urlencoded({ extended: true }));
@@ -70,15 +167,12 @@ mongoose.connect("mongodb+srv://root:123@cluster0.zgyngz9.mongodb.net/registerDB
   .then(() => console.log("MongoDB Connected ✅"))
   .catch(err => console.log("Mongo Error:", err));
 
-// ✅ AWS S3 CONFIG (HARDCODED REGION ONLY)
-// (Using EC2 IAM role → no need accessKey/secretKey)
-AWS.config.update({
+// ✅ S3 CLIENT (DIRECTORY BUCKET)
+const s3 = new S3Client({
   region: "ap-south-1"
 });
 
-const s3 = new AWS.S3();
-
-// ✅ Multer setup
+// ✅ Multer
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 5 * 1024 * 1024 }
@@ -98,7 +192,7 @@ app.get("/", (req, res) => {
   res.sendFile(path.join(__dirname, "index.html"));
 });
 
-// ✅ Register + Upload Image
+// 🔥 Register + Upload (DIRECTORY BUCKET)
 app.post("/register", upload.single("image"), async (req, res) => {
   try {
     const { name, email } = req.body;
@@ -107,21 +201,26 @@ app.post("/register", upload.single("image"), async (req, res) => {
       return res.send("Please upload an image ❌");
     }
 
-    // ✅ S3 Upload (HARDCODED BUCKET)
-    const params = {
-      Bucket: "a--aps1-az1--x-s3", // 🔥 replace this
-      Key: Date.now() + "-" + req.file.originalname,
+    const key = Date.now() + "-" + req.file.originalname;
+
+    // ✅ Upload using SDK v3
+    const command = new PutObjectCommand({
+      Bucket: "a--aps1-az1--x-s3", // your directory bucket
+      Key: key,
       Body: req.file.buffer,
       ContentType: req.file.mimetype
-    };
+    });
 
-    const result = await s3.upload(params).promise();
+    await s3.send(command);
 
-    // ✅ Save to MongoDB
+    // ⚠️ Directory bucket URL format (IMPORTANT)
+    const imageUrl = `https://a--aps1-az1--x-s3.s3express-ap-south-1.amazonaws.com/${key}`;
+
+    // Save in MongoDB
     const user = new User({
       name,
       email,
-      image: result.Location
+      image: imageUrl
     });
 
     await user.save();
@@ -130,7 +229,7 @@ app.post("/register", upload.single("image"), async (req, res) => {
       <h2>Registration Successful ✅</h2>
       <p><b>Name:</b> ${name}</p>
       <p><b>Email:</b> ${email}</p>
-      <img src="${result.Location}" width="200"/>
+      <img src="${imageUrl}" width="200"/>
       <br><br>
       <a href="/">Go Back</a>
     `);
