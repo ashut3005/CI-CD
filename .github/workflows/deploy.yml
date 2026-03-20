@@ -128,13 +128,12 @@ jobs:
         aws-region: ${{ secrets.AWS_REGION }}
 
     # 🔹 Upload project files to S3
-    - name: Upload files to S3
-      run: |
-        aws s3 cp . s3://${{ secrets.S3_BUCKET_NAME }}/ \
-        --recursive \
-        --exclude ".git/*" \
-        --exclude "node_modules/*" \
-        --exclude ".github/*"
+    -  name: Upload files to S3
+  run: |
+    aws s3 cp . s3://${{ secrets.S3_BUCKET_NAME }}/ --recursive \
+      --exclude ".git/*" \
+      --exclude "node_modules/*" \
+      --exclude ".github/*"
 
     # 🔹 Login to ECR
     - name: Login to ECR
